@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Nutrition Dashboard - EATR{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>Nutrition Dashboard</h1>
+        <p>Track your daily nutrition and reach your goals</p>
+    </div>
+</section>
+
+<section class="nutrition-dashboard">
+    <div class="container">
+        <!-- Goals Summary -->
+        <div class="goals-cards">
+            <div class="goal-card">
+                <h3>Daily Calorie Goal</h3>
+                <div class="goal-value">{{ user.calorie_goal|int }}</div>
+                <p>calories</p>
+            </div>
+            <div class="goal-card">
+                <h3>Protein Goal</h3>
+                <div class="goal-value">{{ user.protein_goal|int }}</div>
+                <p>grams</p>
+            </div>
+            <div class="goal-card">
+                <h3>Carbs Goal</h3>
+                <div class="goal-value">{{ user.carbs_goal|int }}</div>
+                <p>grams</p>
+            </div>
+            <div class="goal-card">
+                <h3>Fats Goal</h3>
+                <div class="goal-value">{{ user.fats_goal|int }}</div>
+                <p>grams</p>
+            </div>
+        </div>
+
+        <!-- Today's Progress -->
+        <div class="dashboard-grid">
+            <div class="dashboard-card">
+                <h2>Today's Calories</h2>
+                <div class="progress-container">
+                    <canvas id="caloriesProgress"></canvas>
+                    <div class="progress-text">
+                        <div id="caloriesConsumed">0</div>
+                        <small>of {{ user.calorie_goal|int }} cal</small>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="caloriesBar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <h2>Macros Breakdown</h2>
+                <canvas id="macrosChart"></canvas>
+                <div class="macros-legend">
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #FF6384"></span>
+                        <span>Protein: <strong id="proteinValue">0g</strong></span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #36A2EB"></span>
+                        <span>Carbs: <strong id="carbsValue">0g</strong></span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #FFCE56"></span>
+                        <span>Fats: <strong id="fatsValue">0g</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-card full-width">
+                <h2>Weekly Trend</h2>
+                <canvas id="weeklyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Today's Meals -->
+        <div class="meals-log">
+            <h2>Today's Meals</h2>
+            <div id="mealsContainer">
+                <p class="empty-state">No meals logged yet. Add meals from the recipe browser!</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+    // Load today's nutrition data
+    async function loadNutritionData() {
+        try {
+            const response = await fetch('/nutrition/api/stats');
+            const data = await response.json();
+
+            // Update calories
+            document.getElementById('caloriesConsumed').textContent = Math.round(data.consumed.calories);
+            const caloriesPercent = (data.consumed.calories / data.goals.calories) * 100;
+            document.getElementById('caloriesBar').style.width = Math.min(caloriesPercent, 100) + '%';
+
+            // Update macros
+            document.getElementById('proteinValue').textContent = Math.round(data.consumed.protein) + 'g';
+            document.getElementById('carbsValue').textContent = Math.round(data.consumed.carbs) + 'g';
+            document.getElementById('fatsValue').textContent = Math.round(data.consumed.fats) + 'g';
+
+            // Update charts
+            updateMacrosChart(data.consumed.protein, data.consumed.carbs, data.consumed.fats);
+
+            // Display meals
+            if (data.meals && data.meals.length > 0) {
+                displayMeals(data.meals);
+            }
+        } catch (error) {
+            console.error('Error loading nutrition data:', error);
+        }
+    }
+
+    // Load weekly trend
+    async function loadWeeklyData() {
+        try {
+            const response = await fetch('/nutrition/api/weekly-stats');
+            const data = await response.json();
+            updateWeeklyChart(data.week_data);
+        } catch (error) {
+            console.error('Error loading weekly data:', error);
+        }
+    }
+
+    function displayMeals(meals) {
+        const container = document.getElementById('mealsContainer');
+        container.innerHTML = meals.map(meal => `
+        <div class="meal-item">
+            <div class="meal-info">
+                <strong>${meal.recipe_name}</strong>
+                <span class="meal-type">${meal.meal_type}</span>
+            </div>
+            <div class="meal-calories">${Math.round(meal.calories)} cal</div>
+        </div>
+    `).join('');
+    }
+
+    // Load data on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        loadNutritionData();
+        loadWeeklyData();
+    });
+</script>
+{% endblock %}

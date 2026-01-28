@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="container">
+        <div class="hero-content">
+            <h1 class="hero-title">Your Personal Culinary Companion</h1>
+            <p class="hero-subtitle">Effortless recipes and tracking tailored for your lifestyle</p>
+            <div class="hero-cta">
+                <a href="{{ url_for('recipes.browse') }}" class="btn btn-primary">Browse Recipes</a>
+                <a href="{{ url_for('meal_planner.planner') }}" class="btn btn-secondary">Plan Your Meals</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features">
+    <div class="container">
+        <h2 class="section-title">Reach your health goals in 1-2-3</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🍳</div>
+                <div class="feature-number">1</div>
+                <h3>Cook with recipes & plan your meals</h3>
+                <p>Get custom weekly meal plans with creative, diet-friendly recipes tailored to your goals and food
+                    preferences</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <div class="feature-number">2</div>
+                <h3>Track meals & progress</h3>
+                <p>Effortlessly log your meals, track calories, and monitor goals with our intuitive dashboard</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💡</div>
+                <div class="feature-number">3</div>
+                <h3>Understand what works for you</h3>
+                <p>Gain personalized nutrition insights to make informed and effective health decisions</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Recipes Section -->
+<section class="featured-recipes">
+    <div class="container">
+        <h2 class="section-title">Featured Recipes</h2>
+        <p class="section-subtitle">Discover delicious and nutritious meals</p>
+
+        <div class="recipes-grid">
+            {% for recipe in featured_recipes %}
+            <div class="recipe-card">
+                <div class="recipe-image">
+                    <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}"
+                        onerror="this.src='/static/images/placeholder.jpg'">
+                    <span class="recipe-category">{{ recipe.category }}</span>
+                </div>
+                <div class="recipe-info">
+                    <h3>{{ recipe.name }}</h3>
+                    <p>{{ recipe.description[:80] }}...</p>
+                    <div class="recipe-meta">
+                        <span>⏱️ {{ recipe.total_time }} min</span>
+                        <span>🔥 {{ recipe.calories|int }} cal</span>
+                    </div>
+                    <a href="{{ url_for('recipes.detail', recipe_id=recipe.id) }}" class="btn btn-small">View Recipe</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center" style="margin-top: 2rem;">
+            <a href="{{ url_for('recipes.browse') }}" class="btn btn-primary">View All Recipes</a>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="container">
+        <div class="cta-content">
+            <h2>Ready to start your healthy journey?</h2>
+            <p>Join thousands of users who are achieving their health goals with EATR</p>
+            <a href="{{ url_for('meal_planner.planner') }}" class="btn btn-primary btn-large">Start Planning Today</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

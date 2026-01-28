@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Meal Planner - EATR{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <h1>Weekly Meal Planner</h1>
+        <p>Plan your meals for the week ahead</p>
+    </div>
+</section>
+
+<section class="meal-planner">
+    <div class="container">
+        <div class="planner-controls">
+            <button class="btn btn-secondary" onclick="loadWeekPlan()">🔄 Refresh</button>
+            <button class="btn btn-primary" onclick="showRecipeSelector()">+ Add Meal</button>
+        </div>
+
+        <div class="week-grid" id="weekGrid">
+            <!-- Will be populated by JavaScript -->
+            <div class="loading">Loading meal plan...</div>
+        </div>
+    </div>
+</section>
+
+<!-- Recipe Selector Modal -->
+<div id="recipeSelectorModal" class="modal">
+    <div class="modal-content">
+        <span class="modal-close" onclick="closeRecipeSelector()">&times;</span>
+        <h2>Select a Recipe</h2>
+        <div id="recipeSelectorContent">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentMealSlot = null;
+    let allRecipes = [];
+
+    // Load week plan
+    async function loadWeekPlan() {
+        try {
+            const response = await fetch('/meal-planner/api/week');
+            const data = await response.json();
+            displayWeekPlan(data.week_plan);
+        } catch (error) {
+            console.error('Error loading week plan:', error);
+        }
+    }
+
+    function displayWeekPlan(weekPlan) {
+        const weekGrid = document.getElementById('weekGrid');
+        const days = Object.values(weekPlan);
+
+        weekGrid.innerHTML = days.map(day => `
+        <div class="day-column">
+            <div class="day-header">
+                <h3>${day.day_name}</h3>
+                <small>${day.date}</small>
+                <div class="day-totals">
+                    <strong>${Math.round(day.totals.calories)}</strong> cal
+                </div>
+            </div>
+            
+            ${['breakfast', 'lunch', 'dinner'].map(mealType => `
+                <div class="meal-slot ${day.meals[mealType] ? 'has-meal' : ''}" 
+                     onclick="selectMealSlot('${day.date}', '${mealType}')">
+                    <div class="meal-type-label">${mealType.charAt(0).toUpperCase() + mealType.slice(1)}</div>
+                    ${day.meals[mealType] ? `
+                        <div class="meal-content">
+                            <strong>${day.meals[mealType].recipe_name}</strong>
+                            <small>${Math.round(day.meals[mealType].calories)} cal</small>
+                            <button class="remove-btn" onclick="event.stopPropagation(); removeMeal(${day.meals[mealType].id})">×</button>
+                        </div>
+                    ` : `
+                        <div class="meal-placeholder">+ Add meal</div>
+                    `}
+                </div>
+            `).join('')}
+        </div>
+    `).join('');
+    }
+
+    function selectMealSlot(date, mealType) {
+        currentMealSlot = { date, mealType };
+        showRecipeSelector();
+    }
+
+    async function showRecipeSelector() {
+        if (!currentMealSlot) {
+            const date = prompt('Enter date (YYYY-MM-DD):');
+            const mealType = prompt('Meal type (breakfast/lunch/dinner):');
+            if (!date || !mealType) return;
+            currentMealSlot = { date, mealType };
+        }
+
+        // Load recipes if not already loaded
+        if (allRecipes.length === 0) {
+            try {
+                const response = await fetch('/recipes/api/filter');
+                const data = await response.json();
+                allRecipes = data.recipes;
+            } catch (error) {
+                console.error('Error loading recipes:', error);
+                return;
+            }
+        }
+
+        const modal = document.getElementById('recipeSelectorModal');
+        const content = document.getElementById('recipeSelectorContent');
+
+        content.innerHTML = `
+        <div class="recipe-selector-grid">
+            ${allRecipes.map(recipe => `
+                <div class="recipe-selector-item" onclick="addRecipeToSlot(${recipe.id})">
+                    <img src="${recipe.image_url}" alt="${recipe.name}" onerror="this.src='/static/images/placeholder.jpg'">
+                    <h4>${recipe.name}</h4>
+                    <small>${Math.round(recipe.calories)} cal</small>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+        modal.style.display = 'block';
+    }
+
+    function closeRecipeSelector() {
+        document.getElementById('recipeSelectorModal').style.display = 'none';
+        currentMealSlot = null;
+    }
+
+    async function addRecipeToSlot(recipeId) {
+        if (!currentMealSlot) return;
+
+        try {
+            const response = await fetch('/meal-planner/api/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    recipe_id: recipeId,
+                    date: currentMealSlot.date,
+                    meal_type: currentMealSlot.mealType
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                closeRecipeSelector();
+                loadWeekPlan();
+            }
+        } catch (error) {
+            console.error('Error adding recipe:', error);
+        }
+    }
+
+    async function removeMeal(mealPlanId) {
+        if (!confirm('Remove this meal from your plan?')) return;
+
+        try {
+            const response = await fetch(`/meal-planner/api/remove/${mealPlanId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                loadWeekPlan();
+            }
+        } catch (error) {
+            console.error('Error removing meal:', error);
+        }
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function (event) {
+        const modal = document.getElementById('recipeSelectorModal');
+        if (event.target == modal) {
+            closeRecipeSelector();
+        }
+    }
+
+    // Load plan on page load
+    document.addEventListener('DOMContentLoaded', loadWeekPlan);
+</script>
+{% endblock %}

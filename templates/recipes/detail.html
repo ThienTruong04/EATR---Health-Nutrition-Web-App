@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ recipe.name }} - EATR{% endblock %}
+
+{% block content %}
+<section class="recipe-detail">
+    <div class="container">
+        <div class="recipe-header">
+            <div class="recipe-image-large">
+                <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}"
+                    onerror="this.src='/static/images/placeholder.jpg'">
+            </div>
+            <div class="recipe-overview">
+                <span class="recipe-category-badge">{{ recipe.category }}</span>
+                <h1>{{ recipe.name }}</h1>
+                <p class="recipe-description">{{ recipe.description }}</p>
+
+                <div class="recipe-quick-info">
+                    <div class="info-item">
+                        <span class="icon">⏱️</span>
+                        <div>
+                            <strong>{{ recipe.total_time }} min</strong>
+                            <small>Total Time</small>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <span class="icon">👥</span>
+                        <div>
+                            <strong>{{ recipe.servings }}</strong>
+                            <small>Servings</small>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <span class="icon">🔥</span>
+                        <div>
+                            <strong>{{ recipe.calories|int }}</strong>
+                            <small>Calories</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recipe-tags">
+                    {% for tag in recipe.tags %}
+                    <span class="tag">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+
+                <button class="btn btn-primary" onclick="addToMealPlan({{ recipe.id }})">+ Add to Meal Plan</button>
+            </div>
+        </div>
+
+        <div class="recipe-content">
+            <!-- Nutrition Facts -->
+            <div class="nutrition-panel">
+                <h2>Nutrition Facts</h2>
+                <div class="nutrition-grid">
+                    <div class="nutrition-item">
+                        <span class="nutrition-label">Calories</span>
+                        <span class="nutrition-value">{{ recipe.calories|int }} kcal</span>
+                    </div>
+                    <div class="nutrition-item">
+                        <span class="nutrition-label">Protein</span>
+                        <span class="nutrition-value">{{ recipe.protein|int }}g</span>
+                    </div>
+                    <div class="nutrition-item">
+                        <span class="nutrition-label">Carbs</span>
+                        <span class="nutrition-value">{{ recipe.carbs|int }}g</span>
+                    </div>
+                    <div class="nutrition-item">
+                        <span class="nutrition-label">Fats</span>
+                        <span class="nutrition-value">{{ recipe.fats|int }}g</span>
+                    </div>
+                    <div class="nutrition-item">
+                        <span class="nutrition-label">Fiber</span>
+                        <span class="nutrition-value">{{ recipe.fiber|int }}g</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ingredients -->
+            <div class="ingredients-section">
+                <h2>Ingredients</h2>
+                <ul class="ingredients-list">
+                    {% for ingredient in recipe.ingredients %}
+                    <li>{{ ingredient }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Instructions -->
+            <div class="instructions-section">
+                <h2>Instructions</h2>
+                <ol class="instructions-list">
+                    {% for instruction in recipe.instructions %}
+                    <li>{{ instruction }}</li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function addToMealPlan(recipeId) {
+        // Simple prompt for meal type and date
+        const mealType = prompt('Meal type (breakfast/lunch/dinner):');
+        const date = prompt('Date (YYYY-MM-DD) or leave empty for today:') || new Date().toISOString().split('T')[0];
+
+        if (mealType) {
+            fetch('/meal-planner/api/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    recipe_id: recipeId,
+                    date: date,
+                    meal_type: mealType.toLowerCase()
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Recipe added to meal plan!');
+                    } else {
+                        alert('Error adding recipe to meal plan');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error adding recipe to meal plan');
+                });
+        }
+    }
+</script>
+{% endblock %}

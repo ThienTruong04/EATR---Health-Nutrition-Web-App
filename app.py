@@ -1,6 +1,7 @@
 """
 EATR Health App - Main Flask Application
 """
+import os
 from flask import Flask
 from config import Config
 from models import db
@@ -27,9 +28,17 @@ def create_app(config_class=Config):
     app.register_blueprint(nutrition_bp)
     app.register_blueprint(meal_planner_bp)
     
-    # Create database tables
+    # Create database tables and seed if needed
     with app.app_context():
         db.create_all()
+        
+        # Auto-seed on Vercel (in-memory database)
+        if os.environ.get('VERCEL') and not Recipe.query.first():
+            try:
+                from utils.seed_data import seed_database
+                seed_database()
+            except Exception as e:
+                print(f"Warning: Could not seed database: {e}")
     
     return app
 
@@ -47,3 +56,4 @@ if __name__ == '__main__':
         port=app.config['PORT'],
         debug=app.config['DEBUG']
     )
+
